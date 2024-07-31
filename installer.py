@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+from rich.progress import Progress # type: ignore
 from prettytable import PrettyTable
 import requests
 import parsel
-from rich.progress import Progress # type: ignore
+import os
 
 def search(keywords):
     infoList = []
@@ -25,7 +26,9 @@ def search(keywords):
     print(tb)
 
     songToInstall = input("输入要下载的歌曲序号: ")
-    if 0 <= int(songToInstall) < len(infoList):
+    if songToInstall.lower() == 'q':
+        return None;
+    elif 0 <= int(songToInstall) < len(infoList):
         getSongUrl(infoList[int(songToInstall)])
     else:
         print("输入序号不在范围内!")
@@ -44,12 +47,21 @@ def getSongUrl(songInfo):
 def downloadSong(songUrl, songName, singer):
     response = requests.get(songUrl, stream=True)
     total_size = int(response.headers.get('content-length', 0))
-    chunk_size = 1024
-    with open(f"{songName}--{singer}.mp3", 'wb') as fs, Progress() as progress:
-        task = progress.add_task(f"Downloading {songName}--{singer}.mp3", total=total_size)
-        for data in response.iter_content(chunk_size=chunk_size):
-            fs.write(data)
-            progress.update(task, advance=len(data))
+    if total_size > 0:
+        chunk_size = 1024
+        with open(f"{os.path.dirname(__file__)}/Song/{songName}--{singer}.mp3", 'wb') as fs, Progress() as progress:
+            task = progress.add_task(f"Downloading {songName}--{singer}.mp3", total=total_size)
+            for data in response.iter_content(chunk_size=chunk_size):
+                fs.write(data)
+                progress.update(task, advance=len(data))
+    else:
+        print("无法查找此歌曲!!!可以尝试其它版本(也可以输入q返回上一步)")
+        search(keyword)
 
-keyword = input("搜索关键字: ")
-search(keyword)
+
+if __name__ == '__main__':
+    while True:
+        keyword = input("搜索关键字(输入q将退出): ")
+        if keyword.lower() == 'q':
+            break
+        search(keyword)
